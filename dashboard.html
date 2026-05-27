@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExN — Shadow AI Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080a0f;
+      --surface: #0d1117;
+      --surface2: #141b24;
+      --border: #1e2d3d;
+      --accent: #00ff88;
+      --accent2: #00b4ff;
+      --danger: #ff3b3b;
+      --warn: #ffaa00;
+      --low: #00ff88;
+      --text: #c9d1d9;
+      --muted: #4a5568;
+      --font-mono: 'IBM Plex Mono', monospace;
+      --font-sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanline effect */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,255,136,0.015) 2px,
+        rgba(0,255,136,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 2px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+
+    .main {
+      padding: 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Stat cards */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.high::before { background: var(--danger); }
+    .stat-card.medium::before { background: var(--warn); }
+    .stat-card.low::before { background: var(--low); }
+    .stat-card.total::before { background: var(--accent2); }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .stat-card.high .stat-value { color: var(--danger); }
+    .stat-card.medium .stat-value { color: var(--warn); }
+    .stat-card.low .stat-value { color: var(--low); }
+    .stat-card.total .stat-value { color: var(--accent2); }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn.danger.active { border-color: var(--danger); color: var(--danger); }
+    .filter-btn.warn.active { border-color: var(--warn); color: var(--warn); }
+
+    .search-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      width: 240px;
+      outline: none;
+      margin-left: auto;
+    }
+
+    .search-box:focus { border-color: var(--accent2); }
+    .search-box::placeholder { color: var(--muted); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 180px 140px 100px 80px 100px 1fr;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      background: var(--surface2);
+    }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: 180px 140px 100px 80px 100px 1fr;
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(30,45,61,0.5);
+      align-items: center;
+      transition: background 0.1s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-row:hover { background: var(--surface2); }
+
+    .cell {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 12px;
+    }
+
+    .cell.muted { color: var(--muted); font-size: 11px; }
+    .cell.site { color: var(--accent2); }
+    .cell.user { color: var(--text); font-size: 11px; }
+
+    .risk-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      border-radius: 2px;
+    }
+
+    .risk-HIGH { background: rgba(255,59,59,0.15); color: var(--danger); border: 1px solid rgba(255,59,59,0.3); }
+    .risk-MEDIUM { background: rgba(255,170,0,0.15); color: var(--warn); border: 1px solid rgba(255,170,0,0.3); }
+    .risk-LOW { background: rgba(0,255,136,0.1); color: var(--low); border: 1px solid rgba(0,255,136,0.2); }
+
+    .action-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+
+    .empty-state {
+      padding: 60px;
+      text-align: center;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    #event-count {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: auto;
+      margin-right: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    EXN // SHADOW AI CONTROL CENTER
+  </div>
+  <div class="header-right">
+    <span id="last-updated">LOADING...</span>
+    <span class="status-badge">MONITORING ACTIVE</span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="stats">
+    <div class="stat-card high">
+      <div class="stat-label">High Risk</div>
+      <div class="stat-value" id="count-high">0</div>
+    </div>
+    <div class="stat-card medium">
+      <div class="stat-label">Medium Risk</div>
+      <div class="stat-value" id="count-medium">0</div>
+    </div>
+    <div class="stat-card low">
+      <div class="stat-label">Low Risk</div>
+      <div class="stat-value" id="count-low">0</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-label">Total Events</div>
+      <div class="stat-value" id="count-total">0</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="filter-btn active" data-filter="ALL">ALL</button>
+    <button class="filter-btn danger" data-filter="HIGH">HIGH</button>
+    <button class="filter-btn warn" data-filter="MEDIUM">MEDIUM</button>
+    <button class="filter-btn" data-filter="LOW">LOW</button>
+    <span id="event-count"></span>
+    <button class="clear-btn" id="clear-btn">CLEAR LOGS</button>
+    <input class="search-box" id="search" placeholder="Search site, user, action...">
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <span>TIMESTAMP</span>
+      <span>USER</span>
+      <span>SITE</span>
+      <span>ACTION</span>
+      <span>RISK</span>
+      <span>DETAILS</span>
+    </div>
+    <div id="event-list">
+      <div class="empty-state">LOADING EVENTS...</div>
+    </div>
+  </div>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
