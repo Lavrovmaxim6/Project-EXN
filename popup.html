@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 340px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      margin: 0;
+      padding: 0;
+      background: #0f0f0f;
+      color: #f0f0f0;
+    }
+    .header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; }
+    .header h1 { margin: 0; font-size: 14px; font-weight: 600; }
+    .header span { margin-left: auto; font-size: 11px; color: #888; }
+    .log-list { max-height: 380px; overflow-y: auto; }
+    .log-item { padding: 10px 16px; border-bottom: 1px solid #1e1e1e; }
+    .log-top { display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .site { font-weight: 500; color: #ccc; }
+    .risk { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+    .HIGH { background: #3d1010; color: #ff5555; }
+    .MEDIUM { background: #3d2e10; color: #ffaa33; }
+    .LOW { background: #10301a; color: #33cc66; }
+    .log-bottom { color: #666; font-size: 11px; }
+    .empty { padding: 24px 16px; color: #555; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="dot"></div>
+    <h1>ExN — Shadow AI Detector</h1>
+    <span id="count">0 events</span>
+  </div>
+  <div class="log-list" id="log-list">
+    <div class="empty">No events detected yet.<br>Visit an AI site to start logging.</div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

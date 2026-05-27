@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "ExN - Shadow AI Detector",
+  "version": "1.0",
+  "description": "Detects unauthorized AI tool usage across your organization.",
+
+  "permissions": [
+    "history",
+    "storage",
+    "tabs",
+    "scripting",
+    "identity"
+  ],
+
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://www.perplexity.ai/*",
+    "https://character.ai/*",
+    "https://poe.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://copilot.microsoft.com/*",
+        "https://www.perplexity.ai/*",
+        "https://character.ai/*",
+        "https://poe.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ExN - Shadow AI Detector"
+  }
+}
