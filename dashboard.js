@@ -20,6 +20,8 @@ function renderEvents() {
   const list = document.getElementById("event-list");
   const count = document.getElementById("event-count");
 
+  allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
   let filtered = allLogs.filter(log => {
     const matchFilter = currentFilter === "ALL" || log.risk === currentFilter;
     const searchTerm = currentSearch.toLowerCase();
@@ -49,6 +51,36 @@ function renderEvents() {
   `).join("");
 }
 
+function renderBreakdowns() {
+  // Site breakdown
+  const siteCounts = {};
+  allLogs.forEach(l => {
+    if (l.site) siteCounts[l.site] = (siteCounts[l.site] || 0) + 1;
+  });
+  const siteBox = document.getElementById("site-breakdown");
+  const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]);
+  siteBox.innerHTML = sortedSites.length ? sortedSites.map(([site, count]) => `
+    <div class="site-row">
+      <span class="site-name">${site}</span>
+      <span class="site-count">${count} events</span>
+    </div>
+  `).join("") : '<div style="color:var(--muted);font-family:var(--font-mono);font-size:12px;">No data yet</div>';
+
+  // Action breakdown
+  const actionCounts = {};
+  allLogs.forEach(l => {
+    if (l.action) actionCounts[l.action] = (actionCounts[l.action] || 0) + 1;
+  });
+  const actionBox = document.getElementById("action-breakdown");
+  const sortedActions = Object.entries(actionCounts).sort((a, b) => b[1] - a[1]);
+  actionBox.innerHTML = sortedActions.length ? sortedActions.map(([action, count]) => `
+    <div class="action-row">
+      <span class="action-name">${action}</span>
+      <span class="action-count">${count} events</span>
+    </div>
+  `).join("") : '<div style="color:var(--muted);font-family:var(--font-mono);font-size:12px;">No data yet</div>';
+}
+
 function updateStats() {
   document.getElementById("count-high").textContent = allLogs.filter(l => l.risk === "HIGH").length;
   document.getElementById("count-medium").textContent = allLogs.filter(l => l.risk === "MEDIUM").length;
@@ -62,10 +94,10 @@ function loadLogs() {
     allLogs = logs;
     updateStats();
     renderEvents();
+    renderBreakdowns();
   });
 }
 
-// Filter buttons
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
@@ -75,23 +107,21 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
   });
 });
 
-// Search
 document.getElementById("search").addEventListener("input", (e) => {
   currentSearch = e.target.value;
   renderEvents();
 });
 
-// Clear logs
 document.getElementById("clear-btn").addEventListener("click", () => {
   if (confirm("Clear all logs? This cannot be undone.")) {
     chrome.storage.local.set({ logs: [] }, () => {
       allLogs = [];
       updateStats();
       renderEvents();
+      renderBreakdowns();
     });
   }
 });
 
-// Auto refresh every 5 seconds
 loadLogs();
 setInterval(loadLogs, 5000);

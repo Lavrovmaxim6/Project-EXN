@@ -34,17 +34,13 @@
       overflow-x: hidden;
     }
 
-    /* Scanline effect */
     body::before {
       content: '';
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,255,136,0.015) 2px,
-        rgba(0,255,136,0.015) 4px
+        0deg, transparent, transparent 2px,
+        rgba(0,255,136,0.015) 2px, rgba(0,255,136,0.015) 4px
       );
       pointer-events: none;
       z-index: 1000;
@@ -74,8 +70,7 @@
     }
 
     .logo-dot {
-      width: 8px;
-      height: 8px;
+      width: 8px; height: 8px;
       border-radius: 50%;
       background: var(--accent);
       box-shadow: 0 0 8px var(--accent);
@@ -111,7 +106,6 @@
       margin: 0 auto;
     }
 
-    /* Stat cards */
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -160,7 +154,6 @@
     .stat-card.low .stat-value { color: var(--low); }
     .stat-card.total .stat-value { color: var(--accent2); }
 
-    /* Controls */
     .controls {
       display: flex;
       align-items: center;
@@ -180,11 +173,7 @@
       transition: all 0.15s;
     }
 
-    .filter-btn:hover, .filter-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
+    .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); }
     .filter-btn.danger.active { border-color: var(--danger); color: var(--danger); }
     .filter-btn.warn.active { border-color: var(--warn); color: var(--warn); }
 
@@ -203,10 +192,13 @@
     .search-box:focus { border-color: var(--accent2); }
     .search-box::placeholder { color: var(--muted); }
 
-    /* Table */
     .table-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 420px;
+      margin-bottom: 32px;
     }
 
     .table-header {
@@ -220,6 +212,12 @@
       color: var(--muted);
       text-transform: uppercase;
       background: var(--surface2);
+      flex-shrink: 0;
+    }
+
+    #event-list {
+      overflow-y: auto;
+      flex: 1;
     }
 
     .event-row {
@@ -305,6 +303,58 @@
       margin-left: auto;
       margin-right: 12px;
     }
+
+    /* Bottom sections */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .section-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+    }
+
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .site-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30,45,61,0.5);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .site-row:last-child { border-bottom: none; }
+    .site-name { color: var(--accent2); }
+    .site-count { color: var(--muted); }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30,45,61,0.5);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .action-row:last-child { border-bottom: none; }
+    .action-name { color: var(--text); }
+    .action-count { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -361,6 +411,17 @@
     </div>
     <div id="event-list">
       <div class="empty-state">LOADING EVENTS...</div>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="section-box">
+      <div class="section-title">AI Sites Accessed</div>
+      <div id="site-breakdown"></div>
+    </div>
+    <div class="section-box">
+      <div class="section-title">Action Breakdown</div>
+      <div id="action-breakdown"></div>
     </div>
   </div>
 </div>

@@ -1,64 +1,133 @@
 const SITE = window.location.hostname;
 
+function extractSignals(text) {
+  const signals = { length: text.length, flags: [], counts: {} };
+  if (/\$[\d,]+/.test(text)) signals.flags.push("currency_symbols");
+  if (/\b\d{1,3}(,\d{3})*(\.\d{2})?\b/.test(text)) signals.flags.push("numeric_amounts");
+  if (/revenue|profit|loss|budget|invoice|billing|payment|salary|compensation/i.test(text)) signals.flags.push("financial_terms");
+  if (/q[1-4]\s+\d{4}|quarterly|fiscal|annual report/i.test(text)) signals.flags.push("financial_reporting");
+  if (/\b\d{3}-\d{2}-\d{4}\b/.test(text)) signals.flags.push("ssn_pattern");
+  if (/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/i.test(text)) signals.flags.push("email_addresses");
+  if (/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/.test(text)) signals.flags.push("phone_numbers");
+  if (/\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/.test(text)) signals.flags.push("credit_card_pattern");
+  if (/date of birth|dob|born on|passport|driver.?s license/i.test(text)) signals.flags.push("identity_document");
+  if (/function\s*\(|const\s+\w+\s*=|import\s+{|class\s+\w+\s*{|def\s+\w+\(|SELECT\s+\*\s+FROM/i.test(text)) signals.flags.push("source_code");
+  if (/api[_-]?key|secret[_-]?key|access[_-]?token|bearer\s+[a-z0-9]/i.test(text)) signals.flags.push("credentials_or_tokens");
+  if (/github\.com|gitlab\.com|bitbucket/i.test(text)) signals.flags.push("code_repository");
+  if (/whereas|hereinafter|indemnif|liability|confidential|nda|non-disclosure|attorney|counsel/i.test(text)) signals.flags.push("legal_language");
+  if (/contract|agreement|terms|clause|jurisdiction|arbitration/i.test(text)) signals.flags.push("legal_document");
+  if (/patient|diagnosis|prescription|hipaa|medical record|treatment|physician|dosage/i.test(text)) signals.flags.push("medical_content");
+  if (/\bICD-\d+|\bCPT\s+\d+/i.test(text)) signals.flags.push("medical_codes");
+  if (/employee|performance review|termination|severance|headcount|org chart/i.test(text)) signals.flags.push("hr_content");
+  signals.counts.words = text.split(/\s+/).length;
+  signals.counts.proper_nouns = (text.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+  signals.counts.lines = text.split("\n").length;
+  signals.counts.flag_count = signals.flags.length;
+  return signals;
+}
+
+async function classifyWithAI(signals) {
+  const prompt = `You are a data security classifier. Based on these signals extracted from text, classify the sensitivity level and data type. Never ask for the actual text.
+
+Signals detected:
+- Flags: ${signals.flags.join(", ") || "none"}
+- Word count: ${signals.counts.words}
+- Proper nouns: ${signals.counts.proper_nouns}
+- Lines: ${signals.counts.lines}
+- Character length: ${signals.length}
+
+Respond in JSON only, no other text:
+{
+  "category": "one of: Financial, PII, Source Code, Legal, Medical, HR, Credentials, General",
+  "severity": "one of: CRITICAL, HIGH, MEDIUM, LOW",
+  "summary": "one sentence describing what this likely is",
+  "recommended_action": "one sentence for the security team"
+}`;
+
+  const stored = await chrome.storage.local.get("exnApiKey");
+  const apiKey = stored.exnApiKey;
+  if (!apiKey) return null;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 300,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  const data = await response.json();
+  const raw = data.content[0].text.trim();
+  return JSON.parse(raw);
+}
+
 function sendEvent(data) {
   try {
-    chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }, (response) => {
+    chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }, () => {
       if (chrome.runtime.lastError) {
-        // Service worker was asleep, retry once after a short delay
         setTimeout(() => {
-          try {
-            chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data });
-          } catch(e) {}
+          try { chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }); } catch(e) {}
         }, 500);
       }
     });
   } catch(e) {}
 }
 
-// Method 1: Standard paste event
+async function handlePaste(text) {
+  const base = { action: "paste", characters: text.length };
+  if (text.length >= 20) {
+    try {
+      const signals = extractSignals(text);
+      if (signals.flags.length > 0) {
+        const result = await classifyWithAI(signals);
+        if (result) {
+          sendEvent({ ...base, category: result.category, severity: result.severity, summary: result.summary, recommended_action: result.recommended_action, flags: signals.flags });
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+  sendEvent(base);
+}
+
 document.addEventListener("paste", (e) => {
   const text = e.clipboardData?.getData("text") || "";
-  sendEvent({ action: "paste", characters: text.length });
+  handlePaste(text);
 }, true);
 
-// Method 2: Input event — catches paste in custom editors like ChatGPT
 let lastLength = 0;
 document.addEventListener("input", (e) => {
   const text = e.target?.value || e.target?.innerText || "";
-  const currentLength = text.length;
-  const diff = currentLength - lastLength;
-  if (diff > 20) {
-    sendEvent({ action: "paste", characters: diff });
-  }
-  lastLength = currentLength;
+  const diff = text.length - lastLength;
+  if (diff > 20) handlePaste(text.slice(-diff));
+  lastLength = text.length;
 }, true);
 
-// Method 3: File uploads
 document.addEventListener("change", (e) => {
   if (e.target.type === "file") {
     const file = e.target.files[0];
-    if (file) {
-      sendEvent({ action: "file_upload", fileName: file.name, fileSize: file.size });
-    }
+    if (file) sendEvent({ action: "file_upload", fileName: file.name, fileSize: file.size });
   }
 }, true);
 
-// Method 4: Submit on Enter
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    sendEvent({ action: "submit" });
-  }
+  if (e.key === "Enter" && !e.shiftKey) sendEvent({ action: "submit" });
 }, true);
 
-// Method 5: MutationObserver for ChatGPT DOM changes
 const observer = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.TEXT_NODE && node.textContent.length > 20) {
-        sendEvent({ action: "paste", characters: node.textContent.length });
+        handlePaste(node.textContent);
       }
     }
   }
 });
-
 observer.observe(document.body, { childList: true, subtree: true, characterData: true });

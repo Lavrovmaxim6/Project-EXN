@@ -20,7 +20,8 @@
     "https://copilot.microsoft.com/*",
     "https://www.perplexity.ai/*",
     "https://character.ai/*",
-    "https://poe.com/*"
+    "https://poe.com/*",
+    "https://api.anthropic.com/*"
   ],
 
   "background": {

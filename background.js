@@ -9,33 +9,13 @@ const AI_SITES = [
   "poe.com"
 ];
 
-const RISK_RULES = {
-  paste_large: { threshold: 1000, risk: "HIGH" },
-  paste_small: { threshold: 1, risk: "MEDIUM" },
-  file_upload: { risk: "HIGH" },
-  submit: { risk: "LOW" },
-  visit: { risk: "LOW" }
-};
-
-function getRisk(action, charCount = 0) {
-  if (action === "paste") {
-    return charCount >= RISK_RULES.paste_large.threshold
-      ? RISK_RULES.paste_large.risk
-      : RISK_RULES.paste_small.risk;
-  }
-  return RISK_RULES[action]?.risk || "LOW";
-}
-
 function captureIdentity() {
   chrome.storage.local.get("userIdentity", (data) => {
     if (data.userIdentity) return;
-
     const machineId = chrome.runtime.id.slice(0, 8).toUpperCase();
-
     chrome.identity.getProfileUserInfo({ accountStatus: "ANY" }, (info) => {
       const email = (info && info.email) ? info.email : "unknown@company.com";
-      const identity = `${email} | MACHINE-${machineId}`;
-      chrome.storage.local.set({ userIdentity: identity });
+      chrome.storage.local.set({ userIdentity: `${email} | MACHINE-${machineId}` });
     });
   });
 }
@@ -59,9 +39,16 @@ function saveLog(entry) {
   });
 }
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "EXN_EVENT") {
     getIdentity((identity) => {
+      let risk = "LOW";
+      if (message.severity === "CRITICAL" || message.severity === "HIGH") risk = "HIGH";
+      else if (message.severity === "MEDIUM") risk = "MEDIUM";
+      else if (message.action === "paste" && message.characters >= 1000) risk = "HIGH";
+      else if (message.action === "paste") risk = "MEDIUM";
+      else if (message.action === "file_upload") risk = "HIGH";
+
       const entry = {
         id: Date.now(),
         user: identity,
@@ -71,11 +58,18 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         fileName: message.fileName || null,
         fileSize: message.fileSize || null,
         timestamp: new Date().toISOString(),
-        risk: getRisk(message.action, message.characters || 0)
+        risk,
+        category: message.category || null,
+        severity: message.severity || null,
+        summary: message.summary || null,
+        recommended_action: message.recommended_action || null,
+        flags: message.flags || []
       };
+
       saveLog(entry);
     });
   }
+  return true;
 });
 
 function pullHistory() {
@@ -86,19 +80,22 @@ function pullHistory() {
       (results) => {
         results.forEach((item) => {
           getIdentity((identity) => {
-            const entry = {
+            saveLog({
               id: item.id,
               user: identity,
-              site: site,
+              site,
               action: "visit",
               characters: 0,
               fileName: null,
               fileSize: null,
               timestamp: new Date(item.lastVisitTime).toISOString(),
               risk: "LOW",
-              source: "history"
-            };
-            saveLog(entry);
+              source: "history",
+              category: null,
+              severity: null,
+              summary: null,
+              flags: []
+            });
           });
         });
       }
