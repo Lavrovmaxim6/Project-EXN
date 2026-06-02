@@ -4,21 +4,23 @@ let currentSearch = "";
 
 function formatTime(ts) {
   const d = new Date(ts);
-  return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 function getDetails(log) {
+  if (log.summary) return log.summary;
   const parts = [];
   if (log.characters > 0) parts.push(log.characters.toLocaleString() + " chars");
   if (log.fileName) parts.push(log.fileName);
   if (log.fileSize) parts.push((log.fileSize / 1024).toFixed(1) + " KB");
-  if (log.source === "history") parts.push("from history");
+  if (log.source === "history") parts.push("history");
   return parts.join(" · ") || "—";
 }
 
+
+
 function renderEvents() {
   const list = document.getElementById("event-list");
-  const count = document.getElementById("event-count");
 
   allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -32,61 +34,59 @@ function renderEvents() {
     return matchFilter && matchSearch;
   });
 
-  count.textContent = filtered.length + " events shown";
+  document.getElementById("event-count-label").textContent = filtered.length + " events";
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state">NO EVENTS MATCH CURRENT FILTER</div>';
+    list.innerHTML = '<div class="empty-state">No events match current filter</div>';
     return;
   }
 
   list.innerHTML = filtered.map(log => `
     <div class="event-row">
-      <span class="cell muted">${formatTime(log.timestamp)}</span>
-      <span class="cell user" title="${log.user || 'unknown'}">${(log.user || "unknown").split("|")[0].trim()}</span>
+      <span class="cell ts">${formatTime(log.timestamp)}</span>
+      <span class="cell" title="${log.user || 'unknown'}">${(log.user || "unknown").split("|")[0].trim()}</span>
       <span class="cell site">${log.site || "—"}</span>
-      <span class="cell"><span class="action-badge">${log.action || "—"}</span></span>
-      <span class="cell"><span class="risk-badge risk-${log.risk}">${log.risk}</span></span>
-      <span class="cell muted">${getDetails(log)}</span>
+      <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
+      <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>
+      <span class="cell detail">${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${getDetails(log)}</span>
     </div>
   `).join("");
 }
 
 function renderBreakdowns() {
-  // Site breakdown
   const siteCounts = {};
-  allLogs.forEach(l => {
-    if (l.site) siteCounts[l.site] = (siteCounts[l.site] || 0) + 1;
-  });
+  allLogs.forEach(l => { if (l.site) siteCounts[l.site] = (siteCounts[l.site] || 0) + 1; });
   const siteBox = document.getElementById("site-breakdown");
-  const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]);
+  const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
   siteBox.innerHTML = sortedSites.length ? sortedSites.map(([site, count]) => `
-    <div class="site-row">
-      <span class="site-name">${site}</span>
-      <span class="site-count">${count} events</span>
+    <div class="mini-row">
+      <span class="mini-name">${site}</span>
+      <span class="mini-count">${count}</span>
     </div>
-  `).join("") : '<div style="color:var(--muted);font-family:var(--font-mono);font-size:12px;">No data yet</div>';
+  `).join("") : '<div class="mini-row"><span class="mini-count">No data yet</span></div>';
 
-  // Action breakdown
   const actionCounts = {};
-  allLogs.forEach(l => {
-    if (l.action) actionCounts[l.action] = (actionCounts[l.action] || 0) + 1;
-  });
+  allLogs.forEach(l => { if (l.action) actionCounts[l.action] = (actionCounts[l.action] || 0) + 1; });
   const actionBox = document.getElementById("action-breakdown");
   const sortedActions = Object.entries(actionCounts).sort((a, b) => b[1] - a[1]);
   actionBox.innerHTML = sortedActions.length ? sortedActions.map(([action, count]) => `
-    <div class="action-row">
-      <span class="action-name">${action}</span>
-      <span class="action-count">${count} events</span>
+    <div class="mini-row">
+      <span class="mini-name action">${action}</span>
+      <span class="mini-count">${count}</span>
     </div>
-  `).join("") : '<div style="color:var(--muted);font-family:var(--font-mono);font-size:12px;">No data yet</div>';
+  `).join("") : '<div class="mini-row"><span class="mini-count">No data yet</span></div>';
 }
 
 function updateStats() {
-  document.getElementById("count-high").textContent = allLogs.filter(l => l.risk === "HIGH").length;
-  document.getElementById("count-medium").textContent = allLogs.filter(l => l.risk === "MEDIUM").length;
-  document.getElementById("count-low").textContent = allLogs.filter(l => l.risk === "LOW").length;
+  const high = allLogs.filter(l => l.risk === "HIGH").length;
+  const medium = allLogs.filter(l => l.risk === "MEDIUM").length;
+  const low = allLogs.filter(l => l.risk === "LOW").length;
+  document.getElementById("count-high").textContent = high;
+  document.getElementById("count-medium").textContent = medium;
+  document.getElementById("count-low").textContent = low;
   document.getElementById("count-total").textContent = allLogs.length;
-  document.getElementById("last-updated").textContent = "UPDATED " + new Date().toLocaleTimeString();
+  document.getElementById("high-badge").textContent = high;
+  document.getElementById("last-updated").textContent = "Updated " + new Date().toLocaleTimeString();
 }
 
 function loadLogs() {

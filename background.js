@@ -9,6 +9,17 @@ const AI_SITES = [
   "poe.com"
 ];
 
+const SERVER_URL = "http://localhost:3000";
+
+async function classifyWithServer(signals, apiKey) {
+  const response = await fetch(`${SERVER_URL}/classify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signals, apiKey })
+  });
+  return await response.json();
+}
+
 function captureIdentity() {
   chrome.storage.local.get("userIdentity", (data) => {
     if (data.userIdentity) return;
@@ -41,10 +52,31 @@ function saveLog(entry) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "EXN_EVENT") {
-    getIdentity((identity) => {
+    getIdentity(async (identity) => {
       let risk = "LOW";
-      if (message.severity === "CRITICAL" || message.severity === "HIGH") risk = "HIGH";
-      else if (message.severity === "MEDIUM") risk = "MEDIUM";
+      let category = null, severity = null, summary = null, recommended_action = null, flags = [];
+
+      if (message.action === "paste" && message.signals) {
+        flags = message.signals.flags || [];
+        try {
+          const stored = await chrome.storage.local.get("exnApiKey");
+          const apiKey = stored.exnApiKey;
+          if (apiKey && flags.length > 0) {
+            const result = await classifyWithServer(message.signals, apiKey);
+            if (result) {
+              category = result.category;
+              severity = result.severity;
+              summary = result.summary;
+              recommended_action = result.recommended_action;
+            }
+          }
+        } catch(e) {
+          console.error("[ExN] Classification error:", e);
+        }
+      }
+
+      if (severity === "CRITICAL" || severity === "HIGH") risk = "HIGH";
+      else if (severity === "MEDIUM") risk = "MEDIUM";
       else if (message.action === "paste" && message.characters >= 1000) risk = "HIGH";
       else if (message.action === "paste") risk = "MEDIUM";
       else if (message.action === "file_upload") risk = "HIGH";
@@ -58,12 +90,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         fileName: message.fileName || null,
         fileSize: message.fileSize || null,
         timestamp: new Date().toISOString(),
-        risk,
-        category: message.category || null,
-        severity: message.severity || null,
-        summary: message.summary || null,
-        recommended_action: message.recommended_action || null,
-        flags: message.flags || []
+        risk, category, severity, summary, recommended_action, flags
       };
 
       saveLog(entry);
@@ -112,3 +139,5 @@ chrome.runtime.onStartup.addListener(() => {
   captureIdentity();
   pullHistory();
 });
+
+setInterval(() => fetch("http://localhost:3000/health").catch(() => {}), 25000);

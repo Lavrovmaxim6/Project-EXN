@@ -1,3 +1,5 @@
+console.log("[ExN] Content script loaded on:", window.location.hostname);
+
 const SITE = window.location.hostname;
 
 function extractSignals(text) {
@@ -26,49 +28,8 @@ function extractSignals(text) {
   return signals;
 }
 
-async function classifyWithAI(signals) {
-  const prompt = `You are a data security classifier. Based on these signals extracted from text, classify the sensitivity level and data type. Never ask for the actual text.
-
-Signals detected:
-- Flags: ${signals.flags.join(", ") || "none"}
-- Word count: ${signals.counts.words}
-- Proper nouns: ${signals.counts.proper_nouns}
-- Lines: ${signals.counts.lines}
-- Character length: ${signals.length}
-
-Respond in JSON only, no other text:
-{
-  "category": "one of: Financial, PII, Source Code, Legal, Medical, HR, Credentials, General",
-  "severity": "one of: CRITICAL, HIGH, MEDIUM, LOW",
-  "summary": "one sentence describing what this likely is",
-  "recommended_action": "one sentence for the security team"
-}`;
-
-  const stored = await chrome.storage.local.get("exnApiKey");
-  const apiKey = stored.exnApiKey;
-  if (!apiKey) return null;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 300,
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-
-  const data = await response.json();
-  const raw = data.content[0].text.trim();
-  return JSON.parse(raw);
-}
-
 function sendEvent(data) {
+  console.log("[ExN] Sending event:", data.action, data.characters);
   try {
     chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }, () => {
       if (chrome.runtime.lastError) {
@@ -81,23 +42,21 @@ function sendEvent(data) {
 }
 
 async function handlePaste(text) {
+  console.log("[ExN] Paste detected, length:", text.length);
   const base = { action: "paste", characters: text.length };
   if (text.length >= 20) {
-    try {
-      const signals = extractSignals(text);
-      if (signals.flags.length > 0) {
-        const result = await classifyWithAI(signals);
-        if (result) {
-          sendEvent({ ...base, category: result.category, severity: result.severity, summary: result.summary, recommended_action: result.recommended_action, flags: signals.flags });
-          return;
-        }
-      }
-    } catch(e) {}
+    const signals = extractSignals(text);
+    console.log("[ExN] Signals:", signals.flags);
+    if (signals.flags.length > 0) {
+      sendEvent({ ...base, action: "paste", signals });
+      return;
+    }
   }
   sendEvent(base);
 }
 
 document.addEventListener("paste", (e) => {
+  console.log("[ExN] Paste event fired");
   const text = e.clipboardData?.getData("text") || "";
   handlePaste(text);
 }, true);
@@ -106,7 +65,10 @@ let lastLength = 0;
 document.addEventListener("input", (e) => {
   const text = e.target?.value || e.target?.innerText || "";
   const diff = text.length - lastLength;
-  if (diff > 20) handlePaste(text.slice(-diff));
+  if (diff > 20) {
+    console.log("[ExN] Input event caught large diff:", diff);
+    handlePaste(text.slice(-diff));
+  }
   lastLength = text.length;
 }, true);
 
