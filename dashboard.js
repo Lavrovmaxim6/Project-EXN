@@ -44,7 +44,10 @@ function renderEvents() {
   list.innerHTML = filtered.map(log => `
     <div class="event-row">
       <span class="cell ts">${formatTime(log.timestamp)}</span>
-      <span class="cell" title="${log.user || 'unknown'}">${(log.user || "unknown").split("|")[0].trim()}</span>
+      <span class="cell user-cell" title="${log.user || 'unknown'}">
+        <span class="user-email">${(log.user || "unknown").split("|")[0].trim()}</span>
+        <span class="user-machine">${log.user && log.user.includes("|") ? log.user.split("|")[1].trim() : ""}</span>
+      </span>
       <span class="cell site">${log.site || "—"}</span>
       <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
       <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>

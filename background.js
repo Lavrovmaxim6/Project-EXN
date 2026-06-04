@@ -20,15 +20,25 @@ async function classifyWithServer(signals, apiKey) {
   return await response.json();
 }
 
-function captureIdentity() {
-  chrome.storage.local.get("userIdentity", (data) => {
-    if (data.userIdentity) return;
-    const machineId = chrome.runtime.id.slice(0, 8).toUpperCase();
-    chrome.identity.getProfileUserInfo({ accountStatus: "ANY" }, (info) => {
-      const email = (info && info.email) ? info.email : "unknown@company.com";
-      chrome.storage.local.set({ userIdentity: `${email} | MACHINE-${machineId}` });
-    });
-  });
+async function captureIdentity() {
+  // Get Chrome profile email (only works if signed into Chrome with Google)
+  const info = await new Promise(resolve =>
+    chrome.identity.getProfileUserInfo({ accountStatus: "ANY" }, resolve)
+  );
+  const email = (info && info.email) ? info.email : "unknown";
+
+  // Get hostname + system username from local server
+  let hostname = "unknown-machine";
+  let username = null;
+  try {
+    const res = await fetch(`${SERVER_URL}/identity`);
+    const json = await res.json();
+    if (json.hostname) hostname = json.hostname;
+    if (json.username) username = json.username;
+  } catch (_) {}
+
+  const displayEmail = (email !== "unknown") ? email : (username || "unknown");
+  chrome.storage.local.set({ userIdentity: `${displayEmail} | ${hostname}` });
 }
 
 function getIdentity(callback) {
