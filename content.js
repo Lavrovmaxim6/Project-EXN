@@ -2,6 +2,22 @@ console.log("[ExN] Content script loaded on:", window.location.hostname);
 
 const SITE = window.location.hostname;
 
+let blockModeEnabled = false;
+let blockedUsers = [];
+let currentUserEmail = "";
+
+chrome.storage.local.get({ blockMode: false, blockedUsers: [], userIdentity: "" }, (data) => {
+  blockModeEnabled = data.blockMode;
+  blockedUsers = data.blockedUsers;
+  currentUserEmail = (data.userIdentity || "").split("|")[0].trim();
+});
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.blockMode) blockModeEnabled = changes.blockMode.newValue;
+  if (changes.blockedUsers) blockedUsers = changes.blockedUsers.newValue;
+  if (changes.userIdentity) currentUserEmail = (changes.userIdentity.newValue || "").split("|")[0].trim();
+});
+
 function extractSignals(text) {
   const signals = { length: text.length, flags: [], counts: {} };
   if (/\$[\d,]+/.test(text)) signals.flags.push("currency_symbols");
@@ -41,14 +57,69 @@ function sendEvent(data) {
   } catch(e) {}
 }
 
-async function handlePaste(text) {
+function getLocalRisk(signals) {
+  const criticalFlags = ["ssn_pattern", "credit_card_pattern", "credentials_or_tokens"];
+  const hasCritical = signals.flags.some(f => criticalFlags.includes(f));
+  if (hasCritical) return "BLOCK";
+  if (signals.flags.length >= 3) return "BLOCK";
+  return "ALLOW";
+}
+
+function showBlockNotice(flags) {
+  const existing = document.getElementById("audit-ai-block");
+  if (existing) existing.remove();
+
+  const notice = document.createElement("div");
+  notice.id = "audit-ai-block";
+  notice.style.cssText = `
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 999999;
+    background: #0d1117;
+    border: 1px solid #ff4455;
+    border-radius: 12px;
+    padding: 16px 20px;
+    max-width: 340px;
+    box-shadow: 0 8px 32px rgba(255,68,85,0.2);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  `;
+
+  notice.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#ff4455;box-shadow:0 0 8px #ff4455;"></div>
+      <span style="color:#ff4455;font-size:12px;font-weight:600;letter-spacing:0.05em;">AUDIT-AI — BLOCKED</span>
+    </div>
+    <p style="color:#e2e8f0;font-size:13px;margin:0 0 8px;">This content was blocked from being shared with an external AI tool.</p>
+    <p style="color:#64748b;font-size:11px;margin:0;">Detected: ${flags.join(", ")}</p>
+    <p style="color:#64748b;font-size:11px;margin:6px 0 0;">Contact your IT security team for assistance.</p>
+  `;
+
+  document.body.appendChild(notice);
+  setTimeout(() => notice.remove(), 6000);
+}
+
+async function handlePaste(text, originalEvent = null) {
   console.log("[ExN] Paste detected, length:", text.length);
   const base = { action: "paste", characters: text.length };
   if (text.length >= 20) {
     const signals = extractSignals(text);
     console.log("[ExN] Signals:", signals.flags);
     if (signals.flags.length > 0) {
-      sendEvent({ ...base, action: "paste", signals });
+      const riskLevel = getLocalRisk(signals);
+      const isUserBlocked = currentUserEmail && blockedUsers.includes(currentUserEmail);
+      const isBlocked = riskLevel === "BLOCK" && (blockModeEnabled || isUserBlocked);
+
+      sendEvent({ ...base, action: "paste", signals, blocked: isBlocked, content: text });
+
+      if (isBlocked) {
+        if (originalEvent) {
+          originalEvent.preventDefault();
+          originalEvent.stopImmediatePropagation();
+        }
+        showBlockNotice(signals.flags);
+        return;
+      }
       return;
     }
   }
@@ -58,7 +129,7 @@ async function handlePaste(text) {
 document.addEventListener("paste", (e) => {
   console.log("[ExN] Paste event fired");
   const text = e.clipboardData?.getData("text") || "";
-  handlePaste(text);
+  handlePaste(text, e);
 }, true);
 
 let lastLength = 0;

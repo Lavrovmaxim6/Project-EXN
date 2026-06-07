@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Report — Audit-AI</title>
+  <style>
+    :root {
+      --bg: #f5f5f7; --surface: #ffffff; --surface2: #f5f5f7; --surface3: #e8e8ed;
+      --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+      --blue: #0071e3; --blue-dim: rgba(0,113,227,0.08);
+      --red: #ff3b30; --red-dim: rgba(255,59,48,0.08);
+      --amber: #ff9f0a; --amber-dim: rgba(255,159,10,0.08);
+      --green: #34c759; --green-dim: rgba(52,199,89,0.08);
+      --text: #1d1d1f; --text2: #6e6e73; --text3: #aeaeb2;
+      --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* Topbar */
+    .topbar {
+      padding: 18px 32px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+      position: sticky; top: 0; z-index: 40;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: transparent; border: 1px solid var(--border); color: var(--text2);
+      padding: 6px 12px; border-radius: 8px; font-family: var(--sans);
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.12s; flex-shrink: 0;
+    }
+    .back-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+    .user-header { display: flex; align-items: center; gap: 14px; flex: 1; }
+    .user-avatar-lg {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 18px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; border: 2px solid rgba(0,113,227,0.2);
+    }
+    .user-avatar-lg.high { background: var(--red-dim); color: var(--red); border-color: rgba(255,59,48,0.2); }
+    .user-header-meta h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.03em; }
+    .user-header-meta p { font-size: 12px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+    .risk-badge {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .risk-badge.low  { background: var(--green-dim); color: #1a7f37; }
+    .risk-badge.med  { background: var(--amber-dim); color: #b36200; }
+    .risk-badge.high { background: var(--red-dim);   color: var(--red); }
+
+    /* Content */
+    .content { padding: 28px 32px; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--surface); border-radius: 16px; padding: 18px 20px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .stat-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
+    .stat-card.red    .stat-accent { background: var(--red); }
+    .stat-card.amber  .stat-accent { background: var(--amber); }
+    .stat-card.green  .stat-accent { background: var(--green); }
+    .stat-card.blue   .stat-accent { background: var(--blue); }
+    .stat-card.purple .stat-accent { background: #bf5af2; }
+    .stat-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
+    .stat-card.red    .stat-value { color: var(--red); }
+    .stat-card.amber  .stat-value { color: var(--amber); }
+    .stat-card.green  .stat-value { color: var(--green); }
+    .stat-card.blue   .stat-value { color: var(--blue); }
+    .stat-card.purple .stat-value { color: #bf5af2; }
+    .stat-sub { font-size: 11px; color: var(--text3); }
+
+    /* Main grid */
+    .main-grid { display: grid; grid-template-columns: 1fr 260px; gap: 14px; }
+
+    /* Table card */
+    .table-card {
+      background: var(--surface); border-radius: 16px;
+      box-shadow: var(--shadow-sm); border: 1px solid var(--border); overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text2);
+      padding: 4px 10px; font-family: var(--sans); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.12s; border-radius: 7px;
+    }
+    .filter-btn:hover { background: var(--surface2); border-color: var(--border2); }
+    .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .filter-btn.f-high.active  { background: var(--red);   border-color: var(--red);   color: #fff; }
+    .filter-btn.f-medium.active{ background: var(--amber); border-color: var(--amber); color: #fff; }
+    .search-input {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      padding: 5px 12px; font-family: var(--sans); font-size: 13px; width: 160px;
+      outline: none; border-radius: 8px; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+    .search-input::placeholder { color: var(--text3); }
+    .table-head {
+      display: grid; grid-template-columns: 140px 110px 80px 86px 1fr;
+      padding: 8px 18px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+      color: var(--text3); text-transform: uppercase; background: var(--surface2);
+    }
+    .table-body { overflow-y: auto; max-height: 460px; }
+    .event-row {
+      display: grid; grid-template-columns: 140px 110px 80px 86px 1fr;
+      padding: 10px 18px; border-bottom: 1px solid var(--border);
+      align-items: center; transition: background 0.1s;
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-row:hover { background: var(--surface2); }
+    .cell { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+    .cell.ts   { color: var(--text3); font-size: 11px; font-family: var(--mono); }
+    .cell.site { color: var(--blue); font-weight: 500; }
+    .cell.detail { color: var(--text3); font-size: 11px; font-family: var(--mono); }
+    .risk-pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .risk-HIGH   { background: var(--red-dim);   color: var(--red); }
+    .risk-MEDIUM { background: var(--amber-dim); color: #b36200; }
+    .risk-LOW    { background: var(--green-dim); color: #1a7f37; }
+    .action-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 500; color: var(--text2);
+      background: var(--surface2); border: 1px solid var(--border); font-family: var(--mono);
+    }
+    .blocked-badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
+      border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      color: #ff3b30; background: rgba(255,59,48,0.1); border: 1px solid rgba(255,59,48,0.25);
+      margin-right: 6px; vertical-align: middle;
+    }
+    .blocked-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #ff3b30; flex-shrink: 0; }
+    .empty-state { padding: 48px 20px; text-align: center; font-size: 14px; color: var(--text3); }
+
+    /* Side panel */
+    .side-panel { display: flex; flex-direction: column; gap: 14px; }
+    .mini-card { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); overflow: hidden; }
+    .mini-header { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text); }
+    .mini-body { padding: 4px 0; }
+    .mini-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; }
+    .mini-name { color: var(--blue); font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+    .mini-name.neutral { color: var(--text2); }
+    .mini-name.category { color: var(--amber); }
+    .mini-count { color: var(--text3); font-size: 12px; font-family: var(--mono); font-weight: 500; flex-shrink: 0; }
+
+    /* Profile rows */
+    .profile-row { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-key { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); margin-bottom: 3px; }
+    .profile-val { font-size: 13px; font-weight: 500; color: var(--text); }
+    .profile-val.mono { font-family: var(--mono); font-size: 12px; }
+
+    /* Per-user block toggle */
+    .user-block-control { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .user-block-label { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .user-block-label span:first-child { font-size: 12px; font-weight: 600; color: var(--text); }
+    .user-block-label span:last-child { font-size: 10px; color: var(--text3); }
+    .user-block-label span:last-child.active { color: var(--red); }
+    .toggle-switch { position: relative; width: 40px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { position: absolute; inset: 0; background: var(--surface3); border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-track::before { content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .toggle-switch input:checked + .toggle-track { background: var(--red); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" id="back-btn">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2L4 7l5 5"/></svg>
+    Users
+  </button>
+  <div class="user-header">
+    <div class="user-avatar-lg" id="user-initial">?</div>
+    <div class="user-header-meta">
+      <h1 id="user-email">Loading…</h1>
+      <p id="user-devices"></p>
+    </div>
+  </div>
+  <div class="risk-badge" id="risk-badge"></div>
+  <div class="user-block-control">
+    <div class="user-block-label">
+      <span>Block User</span>
+      <span id="block-user-status">Not blocked</span>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="block-user-toggle">
+      <div class="toggle-track"></div>
+    </label>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card red">
+      <div class="stat-accent"></div>
+      <div class="stat-label">High Risk</div>
+      <div class="stat-value" id="count-high">0</div>
+      <div class="stat-sub">Events flagged</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-accent"></div>
+      <div class="stat-label">Blocked</div>
+      <div class="stat-value" id="count-blocked">0</div>
+      <div class="stat-sub">Pastes stopped</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-accent"></div>
+      <div class="stat-label">Risk Score</div>
+      <div class="stat-value" id="count-risk-pct">0%</div>
+      <div class="stat-sub">% events HIGH</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-accent"></div>
+      <div class="stat-label">Total Events</div>
+      <div class="stat-value" id="count-total">0</div>
+      <div class="stat-sub">All time</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-accent"></div>
+      <div class="stat-label">Days Active</div>
+      <div class="stat-value" id="count-days">0</div>
+      <div class="stat-sub">Unique days</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Event table -->
+    <div class="table-card">
+      <div class="card-header">
+        <span class="card-title">Activity Log</span>
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="ALL">All</button>
+          <button class="filter-btn f-high" data-filter="HIGH">High</button>
+          <button class="filter-btn f-medium" data-filter="MEDIUM">Med</button>
+          <button class="filter-btn" data-filter="LOW">Low</button>
+        </div>
+        <input class="search-input" id="search" placeholder="Search…">
+      </div>
+      <div class="table-head">
+        <span>Timestamp</span>
+        <span>Site</span>
+        <span>Action</span>
+        <span>Risk</span>
+        <span>Details</span>
+      </div>
+      <div class="table-body" id="event-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Side report panel -->
+    <div class="side-panel">
+
+      <!-- Behavior profile -->
+      <div class="mini-card">
+        <div class="mini-header">Behavior Profile</div>
+        <div class="profile-row">
+          <div class="profile-key">Top AI Tool</div>
+          <div class="profile-val" id="prof-top-site">—</div>
+        </div>
+        <div class="profile-row">
+          <div class="profile-key">Primary Action</div>
+          <div class="profile-val" id="prof-top-action">—</div>
+        </div>
+        <div class="profile-row">
+          <div class="profile-key">Content Type</div>
+          <div class="profile-val" id="prof-top-category">—</div>
+        </div>
+        <div class="profile-row">
+          <div class="profile-key">First Seen</div>
+          <div class="profile-val mono" id="prof-first-seen">—</div>
+        </div>
+        <div class="profile-row">
+          <div class="profile-key">Last Active</div>
+          <div class="profile-val mono" id="prof-last-seen">—</div>
+        </div>
+      </div>
+
+      <!-- Sites used -->
+      <div class="mini-card">
+        <div class="mini-header">AI Sites Used</div>
+        <div class="mini-body" id="site-breakdown"></div>
+      </div>
+
+      <!-- Content categories -->
+      <div class="mini-card">
+        <div class="mini-header">Content Detected</div>
+        <div class="mini-body" id="category-breakdown"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="user.js"></script>
+</body>
+</html>

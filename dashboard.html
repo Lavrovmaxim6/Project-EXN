@@ -156,6 +156,74 @@
       border-top: 1px solid var(--border);
     }
 
+    .block-mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .block-mode-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .block-mode-label span:first-child {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .block-mode-label span:last-child {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-track::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--red);
+    }
+
+    .toggle-switch input:checked + .toggle-track::before {
+      transform: translateX(16px);
+    }
+
     .status-pill {
       display: flex;
       align-items: center;
@@ -472,6 +540,31 @@
       font-family: var(--mono);
     }
 
+    .blocked-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #ff3b30;
+      background: rgba(255,59,48,0.1);
+      border: 1px solid rgba(255,59,48,0.25);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .blocked-badge::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ff3b30;
+      flex-shrink: 0;
+    }
+
     .empty-state {
       padding: 64px 20px;
       text-align: center;
@@ -528,6 +621,113 @@
       font-family: var(--mono);
       font-weight: 500;
     }
+
+    .control-card-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+
+    .control-info { flex: 1; }
+
+    .control-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .control-sub {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .control-sub.active {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .control-desc {
+      padding: 0 16px 14px;
+      font-size: 12px;
+      color: var(--text3);
+      line-height: 1.5;
+    }
+
+    .control-desc strong {
+      color: var(--text2);
+    }
+
+    .mini-row.clickable {
+      cursor: pointer;
+    }
+
+    .mini-row.clickable:hover {
+      background: var(--blue-dim);
+    }
+
+    .mini-row.clickable:hover .mini-name {
+      text-decoration: underline;
+    }
+
+    .user-avatar {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--blue-dim);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+
+    .user-row-left {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .user-row-meta {
+      min-width: 0;
+    }
+
+    .user-row-email {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--blue);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+
+    .user-row-machine {
+      font-size: 10px;
+      color: var(--text3);
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+
+    .user-risk-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-right: 4px;
+    }
+
+    .mini-row-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -568,7 +768,7 @@
     </div>
 
     <div class="nav-section">Manage</div>
-    <div class="nav-item">
+    <div class="nav-item" id="nav-users">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="9" cy="6" r="3"/>
         <path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
@@ -670,6 +870,24 @@
 
       <!-- Side Panel -->
       <div class="side-panel">
+
+        <!-- Block Mode Control -->
+        <div class="mini-card">
+          <div class="control-card-body">
+            <div class="control-info">
+              <div class="control-title">Block Mode</div>
+              <div class="control-sub" id="block-mode-status">Off — logging only</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="block-mode-toggle">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div class="control-desc" id="block-mode-desc">
+            Sensitive content is <strong>logged</strong> but allowed through.
+          </div>
+        </div>
+
         <div class="mini-card">
           <div class="mini-header">AI Sites Accessed</div>
           <div class="mini-body" id="site-breakdown"></div>
@@ -677,6 +895,10 @@
         <div class="mini-card">
           <div class="mini-header">Action Breakdown</div>
           <div class="mini-body" id="action-breakdown"></div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-header">Users</div>
+          <div class="mini-body" id="user-breakdown"></div>
         </div>
       </div>
 

@@ -11,11 +11,11 @@ const AI_SITES = [
 
 const SERVER_URL = "http://localhost:3000";
 
-async function classifyWithServer(signals, apiKey) {
+async function classifyWithServer(signals, apiKey, content) {
   const response = await fetch(`${SERVER_URL}/classify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ signals, apiKey })
+    body: JSON.stringify({ signals, apiKey, content })
   });
   return await response.json();
 }
@@ -72,7 +72,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const stored = await chrome.storage.local.get("exnApiKey");
           const apiKey = stored.exnApiKey;
           if (apiKey && flags.length > 0) {
-            const result = await classifyWithServer(message.signals, apiKey);
+            const result = await classifyWithServer(message.signals, apiKey, message.content || null);
             if (result) {
               category = result.category;
               severity = result.severity;
@@ -100,6 +100,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         fileName: message.fileName || null,
         fileSize: message.fileSize || null,
         timestamp: new Date().toISOString(),
+        blocked: message.blocked || false,
         risk, category, severity, summary, recommended_action, flags
       };
 

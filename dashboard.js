@@ -51,7 +51,7 @@ function renderEvents() {
       <span class="cell site">${log.site || "—"}</span>
       <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
       <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>
-      <span class="cell detail">${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${getDetails(log)}</span>
+      <span class="cell detail">${log.blocked ? `<span class="blocked-badge">BLOCKED</span>` : ""}${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${getDetails(log)}</span>
     </div>
   `).join("");
 }
@@ -80,6 +80,47 @@ function renderBreakdowns() {
   `).join("") : '<div class="mini-row"><span class="mini-count">No data yet</span></div>';
 }
 
+function renderUserBreakdown() {
+  const userStats = {};
+  allLogs.forEach(l => {
+    const key = l.user || "unknown";
+    if (!userStats[key]) userStats[key] = { total: 0, high: 0 };
+    userStats[key].total++;
+    if (l.risk === "HIGH") userStats[key].high++;
+  });
+
+  const sorted = Object.entries(userStats).sort((a, b) => b[1].total - a[1].total);
+  const box = document.getElementById("user-breakdown");
+
+  if (!sorted.length) {
+    box.innerHTML = '<div class="mini-row"><span class="mini-count">No users yet</span></div>';
+    return;
+  }
+
+  box.innerHTML = sorted.map(([user, stats]) => {
+    const parts = user.split("|");
+    const email = parts[0].trim();
+    const machine = parts[1] ? parts[1].trim() : "";
+    const initial = email.charAt(0).toUpperCase();
+    const dotColor = stats.high > 0 ? "var(--red)" : "var(--green)";
+    const encoded = encodeURIComponent(user);
+    return `
+      <div class="mini-row clickable" onclick="window.open('user.html?user=${encoded}', '_blank')">
+        <div class="user-row-left">
+          <div class="user-avatar">${initial}</div>
+          <div class="user-row-meta">
+            <div class="user-row-email" title="${email}">${email}</div>
+            ${machine ? `<div class="user-row-machine">${machine}</div>` : ""}
+          </div>
+        </div>
+        <div class="mini-row-right">
+          <div class="user-risk-dot" style="background:${dotColor};" title="${stats.high} high risk"></div>
+          <span class="mini-count">${stats.total}</span>
+        </div>
+      </div>`;
+  }).join("");
+}
+
 function updateStats() {
   const high = allLogs.filter(l => l.risk === "HIGH").length;
   const medium = allLogs.filter(l => l.risk === "MEDIUM").length;
@@ -98,6 +139,7 @@ function loadLogs() {
     updateStats();
     renderEvents();
     renderBreakdowns();
+    renderUserBreakdown();
   });
 }
 
@@ -126,5 +168,35 @@ document.getElementById("clear-btn").addEventListener("click", () => {
   }
 });
 
+document.getElementById("nav-users").addEventListener("click", () => {
+  window.location.href = "users.html";
+});
+
 loadLogs();
 setInterval(loadLogs, 5000);
+
+const blockToggle = document.getElementById("block-mode-toggle");
+const blockStatus = document.getElementById("block-mode-status");
+const blockDesc = document.getElementById("block-mode-desc");
+
+function applyBlockModeUI(enabled) {
+  blockToggle.checked = enabled;
+  if (enabled) {
+    blockStatus.textContent = "On — blocking sensitive pastes";
+    blockStatus.classList.add("active");
+    blockDesc.innerHTML = "Sensitive content is <strong>stopped</strong> before it reaches the AI.";
+  } else {
+    blockStatus.textContent = "Off — logging only";
+    blockStatus.classList.remove("active");
+    blockDesc.innerHTML = "Sensitive content is <strong>logged</strong> but allowed through.";
+  }
+}
+
+chrome.storage.local.get({ blockMode: false }, ({ blockMode }) => {
+  applyBlockModeUI(blockMode);
+});
+
+blockToggle.addEventListener("change", () => {
+  chrome.storage.local.set({ blockMode: blockToggle.checked });
+  applyBlockModeUI(blockToggle.checked);
+});
