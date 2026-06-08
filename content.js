@@ -47,13 +47,7 @@ function extractSignals(text) {
 function sendEvent(data) {
   console.log("[ExN] Sending event:", data.action, data.characters);
   try {
-    chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }, () => {
-      if (chrome.runtime.lastError) {
-        setTimeout(() => {
-          try { chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data }); } catch(e) {}
-        }, 500);
-      }
-    });
+    chrome.runtime.sendMessage({ type: "EXN_EVENT", site: SITE, ...data });
   } catch(e) {}
 }
 
@@ -99,9 +93,9 @@ function showBlockNotice(flags) {
   setTimeout(() => notice.remove(), 6000);
 }
 
-async function handlePaste(text, originalEvent = null) {
+async function handlePaste(text, originalEvent = null, instruction = null) {
   console.log("[ExN] Paste detected, length:", text.length);
-  const base = { action: "paste", characters: text.length };
+  const base = { action: "paste", characters: text.length, instruction };
   if (text.length >= 20) {
     const signals = extractSignals(text);
     console.log("[ExN] Signals:", signals.flags);
@@ -110,7 +104,7 @@ async function handlePaste(text, originalEvent = null) {
       const isUserBlocked = currentUserEmail && blockedUsers.includes(currentUserEmail);
       const isBlocked = riskLevel === "BLOCK" && (blockModeEnabled || isUserBlocked);
 
-      sendEvent({ ...base, action: "paste", signals, blocked: isBlocked, content: text });
+      sendEvent({ ...base, signals, blocked: isBlocked, content: text });
 
       if (isBlocked) {
         if (originalEvent) {
@@ -126,14 +120,23 @@ async function handlePaste(text, originalEvent = null) {
   sendEvent(base);
 }
 
+let isPasting = false;
+let pasteDebounceTimer = null;
+
 document.addEventListener("paste", (e) => {
   console.log("[ExN] Paste event fired");
   const text = e.clipboardData?.getData("text") || "";
-  handlePaste(text, e);
+  const activeEl = document.activeElement;
+  const instruction = (activeEl?.value || activeEl?.innerText || activeEl?.textContent || "").trim().slice(0, 500) || null;
+  isPasting = true;
+  clearTimeout(pasteDebounceTimer);
+  pasteDebounceTimer = setTimeout(() => { isPasting = false; }, 1500);
+  handlePaste(text, e, instruction);
 }, true);
 
 let lastLength = 0;
 document.addEventListener("input", (e) => {
+  if (isPasting) return;
   const text = e.target?.value || e.target?.innerText || "";
   const diff = text.length - lastLength;
   if (diff > 20) {
@@ -155,6 +158,7 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 const observer = new MutationObserver((mutations) => {
+  if (isPasting) return;
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.TEXT_NODE && node.textContent.length > 20) {

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Log — Audit-AI</title>
+  <style>
+    :root {
+      --bg:        #f5f5f7;
+      --surface:   #ffffff;
+      --surface2:  #f5f5f7;
+      --surface3:  #e8e8ed;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.14);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --blue:      #0071e3;
+      --blue-dim:  rgba(0,113,227,0.08);
+      --red:       #ff3b30;
+      --amber:     #ff9f0a;
+      --green:     #34c759;
+      --text:      #1d1d1f;
+      --text2:     #6e6e73;
+      --text3:     #aeaeb2;
+      --sans:      -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      --mono:      "SF Mono", ui-monospace, Menlo, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--blue);
+      padding: 6px 13px 6px 9px;
+      border-radius: 20px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .back-btn:hover {
+      background: var(--blue-dim);
+      border-color: rgba(0,113,227,0.2);
+      transform: translateX(-1px);
+    }
+
+    .topbar-info { flex: 1; }
+    .topbar-title { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; }
+    .topbar-sub   { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .updated-chip {
+      font-size: 12px;
+      color: var(--text3);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 500;
+    }
+
+    /* ── Content ── */
+    .content { padding: 28px 32px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Stat strip ── */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-chip-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text3);
+      margin-bottom: 8px;
+    }
+
+    .stat-chip-value {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stat-chip-value.red    { color: var(--red); }
+    .stat-chip-value.amber  { color: var(--amber); }
+    .stat-chip-value.green  { color: var(--green); }
+
+    /* ── Chart card ── */
+    .chart-card {
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .chart-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .chart-sub   { font-size: 12px; color: var(--text3); }
+
+    /* ── Main pie grid ── */
+    .pie-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .pie-right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Big AI tools donut ── */
+    .big-donut-body {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      padding: 28px 28px;
+    }
+
+    .big-donut-canvas-wrap { flex-shrink: 0; }
+
+    /* ── Big legend ── */
+    .big-legend {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .big-leg-row {
+      display: grid;
+      grid-template-columns: 10px 90px 1fr 38px 52px;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    .big-leg-row:last-child { border-bottom: none; }
+    .big-leg-row:hover { background: var(--surface2); }
+
+    .big-leg-swatch {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .big-leg-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .big-leg-track {
+      height: 5px;
+      background: var(--surface3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .big-leg-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    .big-leg-pct {
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--mono);
+      color: var(--text2);
+      text-align: right;
+    }
+
+    .big-leg-count {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text3);
+      text-align: right;
+    }
+
+    /* ── Small donut ── */
+    .small-donut-body {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+    }
+
+    .small-donut-canvas-wrap { flex-shrink: 0; }
+
+    .small-legend {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 6px;
+    }
+
+    .small-leg-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .small-leg-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .small-leg-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .small-leg-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .small-leg-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+      gap: 1px;
+    }
+
+    .small-leg-pct {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .small-leg-count {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text3);
+      line-height: 1;
+    }
+
+    /* ── Horizontal bar lists ── */
+    .charts-3col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .hbars-body {
+      padding: 8px 0 4px;
+    }
+
+    .hbar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px 20px;
+      transition: background 0.1s;
+    }
+
+    .hbar-item:hover { background: var(--surface2); }
+
+    .hbar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hbar-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hbar-count {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text3);
+      flex-shrink: 0;
+    }
+
+    .hbar-track {
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .hbar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .empty-msg {
+      padding: 32px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" id="back-btn">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Dashboard
+  </button>
+  <div class="topbar-info">
+    <div class="topbar-title">Activity Log</div>
+    <div class="topbar-sub" id="topbar-sub">Loading…</div>
+  </div>
+  <span class="updated-chip" id="last-updated">—</span>
+</div>
+
+<div class="content">
+
+  <!-- Summary numbers -->
+  <div class="stat-strip">
+    <div class="stat-chip">
+      <div class="stat-chip-label">Total Events</div>
+      <div class="stat-chip-value" id="s-total">0</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">High Risk</div>
+      <div class="stat-chip-value red" id="s-high">0</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Blocked</div>
+      <div class="stat-chip-value amber" id="s-blocked">0</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-chip-label">Users Tracked</div>
+      <div class="stat-chip-value" id="s-users">0</div>
+    </div>
+  </div>
+
+  <!-- Pie charts row -->
+  <div class="pie-grid">
+
+    <!-- Big AI Tool Usage donut -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">AI Tool Usage</span>
+        <span class="chart-sub">Which tools are most popular</span>
+      </div>
+      <div class="big-donut-body">
+        <div class="big-donut-canvas-wrap">
+          <canvas id="tools-canvas"></canvas>
+        </div>
+        <div class="big-legend" id="tools-legend"></div>
+      </div>
+    </div>
+
+    <!-- Right column: Risk + Blocked -->
+    <div class="pie-right-col">
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Risk Distribution</span>
+        </div>
+        <div class="small-donut-body">
+          <div class="small-donut-canvas-wrap">
+            <canvas id="risk-canvas"></canvas>
+          </div>
+          <div class="small-legend" id="risk-legend"></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Blocked vs Allowed</span>
+        </div>
+        <div class="small-donut-body">
+          <div class="small-donut-canvas-wrap">
+            <canvas id="blocked-canvas"></canvas>
+          </div>
+          <div class="small-legend" id="blocked-legend"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Horizontal bar lists -->
+  <div class="charts-3col">
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Top Sites</span>
+      </div>
+      <div class="hbars-body" id="sites-bars">
+        <div class="empty-msg">Loading…</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Top Users</span>
+      </div>
+      <div class="hbars-body" id="users-bars">
+        <div class="empty-msg">Loading…</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Action Types</span>
+      </div>
+      <div class="hbars-body" id="actions-bars">
+        <div class="empty-msg">Loading…</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="activity-log.js"></script>
+</body>
+</html>

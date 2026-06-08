@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Policies — Audit-AI</title>
+  <style>
+    :root {
+      --bg:        #f5f5f7;
+      --surface:   #ffffff;
+      --surface2:  #f5f5f7;
+      --surface3:  #e8e8ed;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.14);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --blue:      #0071e3;
+      --blue-dim:  rgba(0,113,227,0.08);
+      --red:       #ff3b30;
+      --red-dim:   rgba(255,59,48,0.08);
+      --amber:     #ff9f0a;
+      --green:     #34c759;
+      --text:      #1d1d1f;
+      --text2:     #6e6e73;
+      --text3:     #aeaeb2;
+      --sans:      -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      --mono:      "SF Mono", ui-monospace, Menlo, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--blue);
+      padding: 6px 13px 6px 9px;
+      border-radius: 20px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .back-btn:hover {
+      background: var(--blue-dim);
+      border-color: rgba(0,113,227,0.2);
+      transform: translateX(-1px);
+    }
+
+    .topbar-title { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; flex: 1; }
+
+    /* ── Content ── */
+    .content {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 52px 32px 80px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      margin-bottom: 64px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--blue-dim);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .hero-headline {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .hero-subheadline {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text2);
+      letter-spacing: -0.01em;
+      margin-bottom: 32px;
+      line-height: 1.4;
+    }
+
+    .hero-body {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text2);
+      margin-bottom: 28px;
+    }
+
+    .hero-body p + p { margin-top: 16px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 32px 0;
+    }
+
+    .stat-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-block-number {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--red);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-block-label {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    /* ── Callout ── */
+    .callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--blue);
+      border-radius: 12px;
+      padding: 18px 22px;
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      margin: 28px 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ── How it works ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text3);
+      margin-bottom: 20px;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 48px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .step {
+      display: flex;
+      gap: 24px;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content {}
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .step-body {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.65;
+    }
+
+    /* ── Closing callout ── */
+    .closing {
+      background: linear-gradient(135deg, #0071e3 0%, #004ea8 100%);
+      border-radius: 16px;
+      padding: 32px 36px;
+      color: #fff;
+      margin-bottom: 72px;
+    }
+
+    .closing-text {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+      opacity: 0.95;
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .section-divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border2);
+    }
+
+    .section-divider-label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text3);
+    }
+
+    /* ── Policies ── */
+    .policies-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .policy-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 26px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .policy-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .policy-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .policy-desc {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .policy-points {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .policy-points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .policy-points li::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text3);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" id="back-btn">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Dashboard
+  </button>
+  <div class="topbar-title">About & Policies</div>
+</div>
+
+<div class="content">
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+      Audit-AI
+    </div>
+    <h1 class="hero-headline">The browser extension that sees what your IT team can't.</h1>
+    <p class="hero-subheadline">Shadow AI is already inside your company.</p>
+
+    <div class="stats-row">
+      <div class="stat-block">
+        <div class="stat-block-number">78%</div>
+        <div class="stat-block-label">of employees admit to using unauthorized AI tools at work</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-number">54%</div>
+        <div class="stat-block-label">continue using them even after receiving AI compliance training</div>
+      </div>
+    </div>
+
+    <div class="hero-body">
+      <p>Your IT team has no visibility into any of it. Every time an employee pastes a financial report, client list, source code, or legal document into ChatGPT or another unregistered AI — your company absorbs the risk.</p>
+      <p>GDPR violations. HIPAA exposure. SOC 2 failures. One data leak can trigger lawsuits, regulatory fines, and irreversible reputational damage.</p>
+    </div>
+
+    <div class="callout">
+      <strong>Audit-AI was built to fix that.</strong> We give security teams the visibility they've been missing — without slowing anyone down.
+    </div>
+  </div>
+
+  <!-- ── How it works ── -->
+  <div class="section-label">How it works</div>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Silent Deployment</div>
+        <div class="step-body">Audit-AI installs silently through your existing SSO or IT management tools. Employees never see it. There's no opt-in, no popup, no friction — it's just on.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Real-Time Detection</div>
+        <div class="step-body">The extension monitors AI tool usage across the browser — past, present, and future. Every interaction is captured: employee identity, machine ID, AI platform used, content type, file size, and timestamp.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Instant Intelligence</div>
+        <div class="step-body">Instead of dumping raw logs onto your security team, Audit-AI classifies every event automatically. Each entry arrives pre-interpreted: what kind of data was shared, how severe the risk is, and what action to take.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="closing">
+    <div class="closing-text">Your security team shouldn't have to investigate 2,000 events a day.<br>Audit-AI does it for them.</div>
+  </div>
+
+  <!-- ── Policies ── -->
+  <div class="section-divider">
+    <div class="section-divider-line"></div>
+    <div class="section-divider-label">Policies</div>
+    <div class="section-divider-line"></div>
+  </div>
+
+  <div class="policies-grid">
+
+    <div class="policy-card">
+      <div class="policy-icon" style="background:rgba(0,113,227,0.08);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#0071e3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 2l1.7 3.4L15 6.3l-3 2.9.7 4.1L9 11.5l-3.7 1.8.7-4.1-3-2.9 4.3-.9z"/>
+        </svg>
+      </div>
+      <div class="policy-name">Data Retention Policy</div>
+      <div class="policy-desc">Audit-AI stores only what's necessary to identify risk. Logs are capped and never leave the organization's local environment.</div>
+      <ul class="policy-points">
+        <li>Maximum of 500 events stored at any time — oldest entries roll off automatically</li>
+        <li>All data is stored locally in the browser via chrome.storage — nothing is sent to external servers</li>
+        <li>Logs can be cleared at any time by an administrator from the dashboard</li>
+        <li>No personally identifiable content is retained — only metadata about what was shared</li>
+      </ul>
+    </div>
+
+    <div class="policy-card">
+      <div class="policy-icon" style="background:rgba(52,199,89,0.1);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#34c759" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="12" height="8" rx="2"/>
+          <path d="M6 8V5a3 3 0 016 0v3"/>
+        </svg>
+      </div>
+      <div class="policy-name">Privacy Policy</div>
+      <div class="policy-desc">Monitoring data stays within your organization. Audit-AI does not transmit, sell, or share any employee activity data with third parties.</div>
+      <ul class="policy-points">
+        <li>Employee identity is captured via Chrome profile or local machine hostname — no additional tracking</li>
+        <li>No content of messages or documents is stored — only signals (size, type, platform, risk level)</li>
+        <li>Data is accessible only to administrators with access to the Audit-AI dashboard</li>
+        <li>Compliant with GDPR, CCPA, and SOC 2 monitoring disclosure frameworks</li>
+      </ul>
+    </div>
+
+    <div class="policy-card">
+      <div class="policy-icon" style="background:rgba(255,159,10,0.1);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff9f0a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 1v2M9 15v2M1 9h2M15 9h2"/>
+          <circle cx="9" cy="9" r="4"/>
+        </svg>
+      </div>
+      <div class="policy-name">Acceptable Use Policy</div>
+      <div class="policy-desc">Employees are expected to follow their organization's guidelines around AI tool usage. Audit-AI enforces those guidelines in real time.</div>
+      <ul class="policy-points">
+        <li>Approved AI tools are defined by IT or security administrators — all others are monitored</li>
+        <li>Sharing confidential data (client records, financials, source code, PII) with AI tools is prohibited unless explicitly authorized</li>
+        <li>Block Mode can be enabled to prevent sensitive content from reaching AI platforms entirely</li>
+        <li>Repeated policy violations escalate automatically to High risk classification</li>
+      </ul>
+    </div>
+
+    <div class="policy-card">
+      <div class="policy-icon" style="background:rgba(255,59,48,0.08);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff3b30" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 2l1.7 3.4L15 6.3l-3 2.9.7 4.1L9 11.5l-3.7 1.8.7-4.1-3-2.9 4.3-.9z"/>
+          <circle cx="9" cy="9" r="1.5" fill="#ff3b30" stroke="none"/>
+        </svg>
+      </div>
+      <div class="policy-name">Monitoring Disclosure Policy</div>
+      <div class="policy-desc">Organizations deploying Audit-AI are responsible for disclosing monitoring to their employees in accordance with local employment and privacy law.</div>
+      <ul class="policy-points">
+        <li>Employees should be notified at onboarding that AI tool usage on company devices is monitored</li>
+        <li>Disclosure language should be included in employee handbooks and IT acceptable use agreements</li>
+        <li>In jurisdictions requiring explicit consent (e.g., EU, CA), written acknowledgement is recommended</li>
+        <li>Audit-AI provides monitoring capability — legal compliance is the responsibility of the deploying organization</li>
+      </ul>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="policies.js"></script>
+</body>
+</html>

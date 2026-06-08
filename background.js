@@ -11,11 +11,11 @@ const AI_SITES = [
 
 const SERVER_URL = "http://localhost:3000";
 
-async function classifyWithServer(signals, apiKey, content) {
+async function classifyWithServer(signals, apiKey, content, instruction) {
   const response = await fetch(`${SERVER_URL}/classify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ signals, apiKey, content })
+    body: JSON.stringify({ signals, apiKey, content, instruction })
   });
   return await response.json();
 }
@@ -50,12 +50,15 @@ function getIdentity(callback) {
 function saveLog(entry) {
   chrome.storage.local.get({ logs: [] }, (data) => {
     const logs = data.logs;
+    const threeSecondsAgo = Date.now() - 3000;
     const exists = logs.some(
-      (l) => l.site === entry.site && l.timestamp === entry.timestamp && l.action === entry.action
+      (l) => l.site === entry.site &&
+             l.action === entry.action &&
+             new Date(l.timestamp).getTime() > threeSecondsAgo
     );
     if (exists) return;
     logs.unshift(entry);
-    if (logs.length > 500) logs.pop();
+    if (logs.length > 700) logs.pop();
     chrome.storage.local.set({ logs });
   });
 }
@@ -65,6 +68,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getIdentity(async (identity) => {
       let risk = "LOW";
       let category = null, severity = null, summary = null, recommended_action = null, flags = [];
+      let intent = null, output_risk = null;
 
       if (message.action === "paste" && message.signals) {
         flags = message.signals.flags || [];
@@ -72,12 +76,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const stored = await chrome.storage.local.get("exnApiKey");
           const apiKey = stored.exnApiKey;
           if (apiKey && flags.length > 0) {
-            const result = await classifyWithServer(message.signals, apiKey, message.content || null);
+            const result = await classifyWithServer(message.signals, apiKey, message.content || null, message.instruction || null);
             if (result) {
               category = result.category;
               severity = result.severity;
               summary = result.summary;
               recommended_action = result.recommended_action;
+              intent = result.intent || null;
+              output_risk = result.output_risk || null;
             }
           }
         } catch(e) {
@@ -101,7 +107,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         fileSize: message.fileSize || null,
         timestamp: new Date().toISOString(),
         blocked: message.blocked || false,
-        risk, category, severity, summary, recommended_action, flags
+        risk, category, severity, summary, recommended_action, flags, intent, output_risk
       };
 
       saveLog(entry);

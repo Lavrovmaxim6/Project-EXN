@@ -51,7 +51,7 @@ function renderEvents() {
       <span class="cell site">${log.site || "—"}</span>
       <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
       <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>
-      <span class="cell detail">${log.blocked ? `<span class="blocked-badge">BLOCKED</span>` : ""}${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${getDetails(log)}</span>
+      <span class="cell detail">${log.blocked ? `<span class="blocked-badge">BLOCKED</span>` : ""}${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${log.intent && log.intent !== "other" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;color:#0071e3;background:rgba(0,113,227,0.1);border:1px solid rgba(0,113,227,0.2);font-family:var(--mono);margin-right:6px;">${log.intent}</span>` : ""}${log.output_risk === "HIGH" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;color:#ff3b30;background:rgba(255,59,48,0.1);border:1px solid rgba(255,59,48,0.2);font-family:var(--mono);margin-right:6px;">out:HIGH</span>` : ""}${getDetails(log)}</span>
     </div>
   `).join("");
 }
@@ -122,15 +122,18 @@ function renderUserBreakdown() {
 }
 
 function updateStats() {
-  const high = allLogs.filter(l => l.risk === "HIGH").length;
-  const medium = allLogs.filter(l => l.risk === "MEDIUM").length;
-  const low = allLogs.filter(l => l.risk === "LOW").length;
-  document.getElementById("count-high").textContent = high;
-  document.getElementById("count-medium").textContent = medium;
-  document.getElementById("count-low").textContent = low;
-  document.getElementById("count-total").textContent = allLogs.length;
-  document.getElementById("high-badge").textContent = high;
-  document.getElementById("last-updated").textContent = "Updated " + new Date().toLocaleTimeString();
+  const high    = allLogs.filter(l => l.risk === "HIGH").length;
+  const medium  = allLogs.filter(l => l.risk === "MEDIUM").length;
+  const low     = allLogs.filter(l => l.risk === "LOW").length;
+  const blocked = allLogs.filter(l => l.blocked).length;
+  document.getElementById("count-high").textContent    = high;
+  document.getElementById("count-medium").textContent  = medium;
+  document.getElementById("count-low").textContent     = low;
+  document.getElementById("count-total").textContent   = allLogs.length;
+  document.getElementById("count-blocked").textContent = blocked;
+  document.getElementById("count-shadow").textContent  = 0;
+  document.getElementById("high-badge").textContent    = high;
+  document.getElementById("last-updated").textContent  = "Updated " + new Date().toLocaleTimeString();
 }
 
 function loadLogs() {
@@ -143,12 +146,31 @@ function loadLogs() {
   });
 }
 
+function setFilter(filter) {
+  currentFilter = filter;
+  document.querySelectorAll(".filter-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.filter === filter);
+  });
+  document.querySelectorAll(".stat-card").forEach(c => c.classList.remove("filtering"));
+  if (filter === "HIGH")   document.getElementById("stat-high").classList.add("filtering");
+  if (filter === "MEDIUM") document.getElementById("stat-medium").classList.add("filtering");
+  if (filter === "LOW")    document.getElementById("stat-low").classList.add("filtering");
+  renderEvents();
+}
+
 document.querySelectorAll(".filter-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    currentFilter = btn.dataset.filter;
-    renderEvents();
+  btn.addEventListener("click", () => setFilter(btn.dataset.filter));
+});
+
+const statCardMap = [
+  { id: "stat-high",   filter: "HIGH" },
+  { id: "stat-medium", filter: "MEDIUM" },
+  { id: "stat-low",    filter: "LOW" },
+  { id: "stat-total",  filter: "ALL" },
+];
+statCardMap.forEach(({ id, filter }) => {
+  document.getElementById(id).addEventListener("click", () => {
+    setFilter(currentFilter === filter ? "ALL" : filter);
   });
 });
 
@@ -170,6 +192,14 @@ document.getElementById("clear-btn").addEventListener("click", () => {
 
 document.getElementById("nav-users").addEventListener("click", () => {
   window.location.href = "users.html";
+});
+
+document.getElementById("nav-activity").addEventListener("click", () => {
+  window.location.href = "activity-log.html";
+});
+
+document.getElementById("nav-policies").addEventListener("click", () => {
+  window.location.href = "policies.html";
 });
 
 loadLogs();

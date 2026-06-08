@@ -312,7 +312,7 @@
     /* ── Stat Cards ── */
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 14px;
       margin-bottom: 24px;
     }
@@ -325,13 +325,20 @@
       border: 1px solid var(--border);
       position: relative;
       overflow: hidden;
-      transition: box-shadow 0.2s, transform 0.2s;
+      transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+      cursor: pointer;
+      user-select: none;
     }
 
     .stat-card:hover {
       box-shadow: var(--shadow-md);
       transform: translateY(-1px);
     }
+
+    .stat-card.red.filtering   { border-color: var(--red);   box-shadow: 0 0 0 3px rgba(255,59,48,0.15),  var(--shadow-md); }
+    .stat-card.amber.filtering { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255,159,10,0.15), var(--shadow-md); }
+    .stat-card.green.filtering { border-color: var(--green); box-shadow: 0 0 0 3px rgba(52,199,89,0.15),  var(--shadow-md); }
+    .stat-card.blue.filtering  { border-color: var(--blue);  box-shadow: 0 0 0 3px rgba(0,113,227,0.15),  var(--shadow-md); }
 
     .stat-accent {
       position: absolute;
@@ -340,10 +347,12 @@
       border-radius: 16px 16px 0 0;
     }
 
-    .stat-card.red  .stat-accent { background: var(--red); }
-    .stat-card.amber .stat-accent { background: var(--amber); }
-    .stat-card.green .stat-accent { background: var(--green); }
-    .stat-card.blue .stat-accent { background: var(--blue); }
+    .stat-card.red    .stat-accent { background: var(--red); }
+    .stat-card.amber  .stat-accent { background: var(--amber); }
+    .stat-card.green  .stat-accent { background: var(--green); }
+    .stat-card.blue   .stat-accent { background: var(--blue); }
+    .stat-card.purple .stat-accent { background: #7c3aed; }
+    .stat-card.shadow .stat-accent { background: #3a3a3c; }
 
     .stat-label {
       font-size: 12px;
@@ -362,10 +371,12 @@
       margin-bottom: 6px;
     }
 
-    .stat-card.red   .stat-value { color: var(--red); }
-    .stat-card.amber .stat-value { color: var(--amber); }
-    .stat-card.green .stat-value { color: var(--green); }
-    .stat-card.blue  .stat-value { color: var(--blue); }
+    .stat-card.red    .stat-value { color: var(--red); }
+    .stat-card.amber  .stat-value { color: var(--amber); }
+    .stat-card.green  .stat-value { color: var(--green); }
+    .stat-card.blue   .stat-value { color: var(--blue); }
+    .stat-card.purple .stat-value { color: #7c3aed; }
+    .stat-card.shadow .stat-value { color: #3a3a3c; }
 
     .stat-sub {
       font-size: 12px;
@@ -752,7 +763,7 @@
       Dashboard
       <span class="nav-badge" id="high-badge">0</span>
     </div>
-    <div class="nav-item">
+    <div class="nav-item" id="nav-activity">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="3" width="14" height="12" rx="2"/>
         <path d="M5 7h8M5 10h5"/>
@@ -775,11 +786,11 @@
       </svg>
       Users
     </div>
-    <div class="nav-item">
+    <div class="nav-item" id="nav-policies">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 2l1.7 3.4L15 6.3l-3 2.9.7 4.1L9 11.5l-3.7 1.8.7-4.1-3-2.9 4.3-.9z"/>
       </svg>
-      Policies
+      About & Policies
     </div>
     <div class="nav-item">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -813,29 +824,41 @@
 
     <!-- Stats -->
     <div class="stats">
-      <div class="stat-card red">
+      <div class="stat-card red" id="stat-high">
         <div class="stat-accent"></div>
         <div class="stat-label">High Risk</div>
         <div class="stat-value" id="count-high">0</div>
         <div class="stat-sub">Requires immediate review</div>
       </div>
-      <div class="stat-card amber">
+      <div class="stat-card amber" id="stat-medium">
         <div class="stat-accent"></div>
         <div class="stat-label">Medium Risk</div>
         <div class="stat-value" id="count-medium">0</div>
         <div class="stat-sub">Monitor closely</div>
       </div>
-      <div class="stat-card green">
+      <div class="stat-card green" id="stat-low">
         <div class="stat-accent"></div>
         <div class="stat-label">Low Risk</div>
         <div class="stat-value" id="count-low">0</div>
         <div class="stat-sub">Standard activity</div>
       </div>
-      <div class="stat-card blue">
+      <div class="stat-card blue" id="stat-total">
         <div class="stat-accent"></div>
         <div class="stat-label">Total Events</div>
         <div class="stat-value" id="count-total">0</div>
         <div class="stat-sub">Last 30 days</div>
+      </div>
+      <div class="stat-card purple" id="stat-blocked">
+        <div class="stat-accent"></div>
+        <div class="stat-label">Blocked</div>
+        <div class="stat-value" id="count-blocked">0</div>
+        <div class="stat-sub">Events stopped</div>
+      </div>
+      <div class="stat-card shadow" id="stat-shadow">
+        <div class="stat-accent"></div>
+        <div class="stat-label">Shadow AI Usage</div>
+        <div class="stat-value" id="count-shadow">0</div>
+        <div class="stat-sub">Configure LLM policy</div>
       </div>
     </div>
 
