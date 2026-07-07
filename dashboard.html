@@ -477,9 +477,18 @@
 
     .clear-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
 
+    .table-scroll-wrap {
+      overflow: auto;
+      height: 420px;
+    }
+
     .table-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
       display: grid;
-      grid-template-columns: 152px 180px 120px 82px 90px 1fr;
+      grid-template-columns: 152px 180px 120px 82px 90px 1fr 32px;
+      min-width: 900px;
       padding: 8px 18px;
       border-bottom: 1px solid var(--border);
       font-size: 11px;
@@ -492,18 +501,34 @@
     }
 
     .table-body {
-      overflow-y: auto;
-      height: 380px;
+      overflow: visible;
     }
 
     .event-row {
       display: grid;
-      grid-template-columns: 152px 180px 120px 82px 90px 1fr;
+      grid-template-columns: 152px 180px 120px 82px 90px 1fr 32px;
+      min-width: 900px;
       padding: 10px 18px;
       border-bottom: 1px solid var(--border);
       align-items: center;
       transition: background 0.1s;
     }
+
+    .delete-btn {
+      visibility: hidden;
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      padding: 3px 5px;
+      border-radius: 5px;
+      font-size: 15px;
+      line-height: 1;
+      transition: color 0.1s, background 0.1s;
+    }
+
+    .event-row:hover .delete-btn { visibility: visible; }
+    .delete-btn:hover { color: var(--red); background: var(--red-dim); }
 
     .event-row:last-child { border-bottom: none; }
     .event-row:hover { background: var(--surface2); }
@@ -518,6 +543,7 @@
     }
 
     .cell.ts   { color: var(--text3); font-size: 11px; font-family: var(--mono); }
+    .ts-full   { color: var(--text3); font-size: 11px; font-family: var(--mono); }
     .cell.site { color: var(--blue);  font-weight: 500; }
     .cell.detail { color: var(--text3); font-size: 11px; font-family: var(--mono); }
 
@@ -755,7 +781,7 @@
 
   <div class="sidebar-nav">
     <div class="nav-section">Monitor</div>
-    <div class="nav-item active">
+    <div class="nav-item active home-item" style="border:1px solid rgba(0,113,227,0.14);">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <path d="M2 12l4-4 3 3 4-5 3 3"/>
         <rect x="1" y="1" width="16" height="16" rx="3"/>
@@ -770,10 +796,9 @@
       </svg>
       Activity Log
     </div>
-    <div class="nav-item">
+    <div class="nav-item" id="nav-devices">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="2" width="14" height="14" rx="3"/>
-        <path d="M6 9h6M9 6v6"/>
+        <rect x="1" y="4" width="16" height="10" rx="2"/><path d="M6 14v2M12 14v2M4 16h10"/>
       </svg>
       Devices
     </div>
@@ -792,9 +817,9 @@
       </svg>
       About & Policies
     </div>
-    <div class="nav-item">
+    <div class="nav-item" id="nav-reports">
       <svg class="nav-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 14l4-6 3 4 2-2 3 4"/>
+        <path d="M3 14l4-6 3 4 2-2 3 4"/><rect x="1" y="1" width="16" height="16" rx="3"/>
       </svg>
       Reports
     </div>
@@ -876,18 +901,22 @@
             <button class="filter-btn" data-filter="LOW">Low</button>
           </div>
           <input class="search-input" id="search" placeholder="Search…">
+          <button class="clear-btn" id="export-btn">Download</button>
           <button class="clear-btn" id="clear-btn">Clear</button>
         </div>
-        <div class="table-head">
-          <span>Timestamp</span>
-          <span>User</span>
-          <span>Site</span>
-          <span>Action</span>
-          <span>Risk</span>
-          <span>Details</span>
-        </div>
-        <div class="table-body" id="event-list">
-          <div class="empty-state">Loading events…</div>
+        <div class="table-scroll-wrap">
+          <div class="table-head">
+            <span>Timestamp</span>
+            <span>User</span>
+            <span>Site</span>
+            <span>Action</span>
+            <span>Risk</span>
+            <span>Details</span>
+            <span></span>
+          </div>
+          <div class="table-body" id="event-list">
+            <div class="empty-state">Loading events…</div>
+          </div>
         </div>
       </div>
 

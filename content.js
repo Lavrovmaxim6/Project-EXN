@@ -99,23 +99,20 @@ async function handlePaste(text, originalEvent = null, instruction = null) {
   if (text.length >= 20) {
     const signals = extractSignals(text);
     console.log("[ExN] Signals:", signals.flags);
-    if (signals.flags.length > 0) {
-      const riskLevel = getLocalRisk(signals);
-      const isUserBlocked = currentUserEmail && blockedUsers.includes(currentUserEmail);
-      const isBlocked = riskLevel === "BLOCK" && (blockModeEnabled || isUserBlocked);
+    const riskLevel = getLocalRisk(signals);
+    const isUserBlocked = currentUserEmail && blockedUsers.includes(currentUserEmail);
+    const isBlocked = riskLevel === "BLOCK" && (blockModeEnabled || isUserBlocked);
 
-      sendEvent({ ...base, signals, blocked: isBlocked, content: text });
+    sendEvent({ ...base, signals, blocked: isBlocked, content: text });
 
-      if (isBlocked) {
-        if (originalEvent) {
-          originalEvent.preventDefault();
-          originalEvent.stopImmediatePropagation();
-        }
-        showBlockNotice(signals.flags);
-        return;
+    if (isBlocked) {
+      if (originalEvent) {
+        originalEvent.preventDefault();
+        originalEvent.stopImmediatePropagation();
       }
-      return;
+      showBlockNotice(signals.flags);
     }
+    return;
   }
   sendEvent(base);
 }

@@ -1,3 +1,3 @@
-document.getElementById("back-btn").addEventListener("click", () => {
-  window.location.href = "dashboard.html";
+document.querySelectorAll("[data-nav]").forEach(el => {
+  el.addEventListener("click", () => { location.href = el.dataset.nav; });
 });

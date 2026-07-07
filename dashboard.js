@@ -4,7 +4,13 @@ let currentSearch = "";
 
 function formatTime(ts) {
   const d = new Date(ts);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return d.toLocaleDateString("en-US", { month: "long" });
+}
+
+function formatTimeFull(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " +
+         d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 function getDetails(log) {
@@ -42,8 +48,8 @@ function renderEvents() {
   }
 
   list.innerHTML = filtered.map(log => `
-    <div class="event-row">
-      <span class="cell ts">${formatTime(log.timestamp)}</span>
+    <div class="event-row" data-ts="${log.timestamp}">
+      <span class="cell ts">${formatTimeFull(log.timestamp)}</span>
       <span class="cell user-cell" title="${log.user || 'unknown'}">
         <span class="user-email">${(log.user || "unknown").split("|")[0].trim()}</span>
         <span class="user-machine">${log.user && log.user.includes("|") ? log.user.split("|")[1].trim() : ""}</span>
@@ -52,8 +58,18 @@ function renderEvents() {
       <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
       <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>
       <span class="cell detail">${log.blocked ? `<span class="blocked-badge">BLOCKED</span>` : ""}${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}${log.intent && log.intent !== "other" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;color:#0071e3;background:rgba(0,113,227,0.1);border:1px solid rgba(0,113,227,0.2);font-family:var(--mono);margin-right:6px;">${log.intent}</span>` : ""}${log.output_risk === "HIGH" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;color:#ff3b30;background:rgba(255,59,48,0.1);border:1px solid rgba(255,59,48,0.2);font-family:var(--mono);margin-right:6px;">out:HIGH</span>` : ""}${getDetails(log)}</span>
+      <button class="delete-btn" title="Delete event">×</button>
     </div>
   `).join("");
+
+  list.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const ts = btn.closest(".event-row").dataset.ts;
+      deleteEvent(ts);
+    });
+  });
+
 }
 
 function renderBreakdowns() {
@@ -136,6 +152,16 @@ function updateStats() {
   document.getElementById("last-updated").textContent  = "Updated " + new Date().toLocaleTimeString();
 }
 
+function deleteEvent(ts) {
+  allLogs = allLogs.filter(l => String(l.timestamp) !== String(ts));
+  chrome.storage.local.set({ logs: allLogs }, () => {
+    updateStats();
+    renderEvents();
+    renderBreakdowns();
+    renderUserBreakdown();
+  });
+}
+
 function loadLogs() {
   chrome.storage.local.get({ logs: [] }, ({ logs }) => {
     allLogs = logs;
@@ -179,6 +205,33 @@ document.getElementById("search").addEventListener("input", (e) => {
   renderEvents();
 });
 
+document.getElementById("export-btn").addEventListener("click", () => {
+  const headers = ["Timestamp", "User", "Site", "Action", "Risk", "Category", "Severity", "Summary", "Intent", "Output Risk", "Characters", "Blocked", "Flags"];
+  const rows = allLogs.map(l => [
+    l.timestamp,
+    (l.user || "").replace(/,/g, " "),
+    l.site || "",
+    l.action || "",
+    l.risk || "",
+    l.category || "",
+    l.severity || "",
+    (l.summary || "").replace(/,/g, ";"),
+    l.intent || "",
+    l.output_risk || "",
+    l.characters || 0,
+    l.blocked ? "Yes" : "No",
+    (l.flags || []).join("; ")
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `audit-ai-events-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
 document.getElementById("clear-btn").addEventListener("click", () => {
   if (confirm("Clear all logs? This cannot be undone.")) {
     chrome.storage.local.set({ logs: [] }, () => {
@@ -190,17 +243,11 @@ document.getElementById("clear-btn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("nav-users").addEventListener("click", () => {
-  window.location.href = "users.html";
-});
-
-document.getElementById("nav-activity").addEventListener("click", () => {
-  window.location.href = "activity-log.html";
-});
-
-document.getElementById("nav-policies").addEventListener("click", () => {
-  window.location.href = "policies.html";
-});
+document.getElementById("nav-users").addEventListener("click", () => { window.location.href = "users.html"; });
+document.getElementById("nav-activity").addEventListener("click", () => { window.location.href = "activity-log.html"; });
+document.getElementById("nav-policies").addEventListener("click", () => { window.location.href = "policies.html"; });
+document.getElementById("nav-devices").addEventListener("click", () => { window.location.href = "devices.html"; });
+document.getElementById("nav-reports").addEventListener("click", () => { window.location.href = "reports.html"; });
 
 loadLogs();
 setInterval(loadLogs, 5000);

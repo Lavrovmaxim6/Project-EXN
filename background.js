@@ -9,7 +9,7 @@ const AI_SITES = [
   "poe.com"
 ];
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://exn-server-sqb6.onrender.com";
 
 async function classifyWithServer(signals, apiKey, content, instruction) {
   const response = await fetch(`${SERVER_URL}/classify`, {
@@ -17,28 +17,21 @@ async function classifyWithServer(signals, apiKey, content, instruction) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ signals, apiKey, content, instruction })
   });
-  return await response.json();
+  const data = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error || `Server error: ${response.status}`);
+  return data;
 }
 
 async function captureIdentity() {
-  // Get Chrome profile email (only works if signed into Chrome with Google)
+  const stored = await chrome.storage.local.get("userIdentity");
+  if (stored.userIdentity && stored.userIdentity !== "unknown") return;
+
   const info = await new Promise(resolve =>
     chrome.identity.getProfileUserInfo({ accountStatus: "ANY" }, resolve)
   );
-  const email = (info && info.email) ? info.email : "unknown";
-
-  // Get hostname + system username from local server
-  let hostname = "unknown-machine";
-  let username = null;
-  try {
-    const res = await fetch(`${SERVER_URL}/identity`);
-    const json = await res.json();
-    if (json.hostname) hostname = json.hostname;
-    if (json.username) username = json.username;
-  } catch (_) {}
-
-  const displayEmail = (email !== "unknown") ? email : (username || "unknown");
-  chrome.storage.local.set({ userIdentity: `${displayEmail} | ${hostname}` });
+  if (info && info.email) {
+    chrome.storage.local.set({ userIdentity: info.email });
+  }
 }
 
 function getIdentity(callback) {
@@ -58,7 +51,7 @@ function saveLog(entry) {
     );
     if (exists) return;
     logs.unshift(entry);
-    if (logs.length > 700) logs.pop();
+    if (logs.length > 800) logs.pop();
     chrome.storage.local.set({ logs });
   });
 }
@@ -75,9 +68,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           const stored = await chrome.storage.local.get("exnApiKey");
           const apiKey = stored.exnApiKey;
-          if (apiKey && flags.length > 0) {
+          if (apiKey && (flags.length > 0 || message.content)) {
             const result = await classifyWithServer(message.signals, apiKey, message.content || null, message.instruction || null);
-            if (result) {
+            if (result && result.category) {
               category = result.category;
               severity = result.severity;
               summary = result.summary;
@@ -157,4 +150,4 @@ chrome.runtime.onStartup.addListener(() => {
   pullHistory();
 });
 
-setInterval(() => fetch("http://localhost:3000/health").catch(() => {}), 25000);
+setInterval(() => fetch(`${SERVER_URL}/health`).catch(() => {}), 25000);

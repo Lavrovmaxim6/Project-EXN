@@ -22,6 +22,12 @@ function formatDate(ts) {
 function formatTime(ts) {
   if (!ts) return "—";
   const d = new Date(ts);
+  return d.toLocaleDateString("en-US", { month: "long" });
+}
+
+function formatTimeFull(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " +
     d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
@@ -100,7 +106,7 @@ function renderDetailHTML(email) {
     const detail = l.summary || (l.characters > 0 ? l.characters.toLocaleString() + " chars" : l.fileName || "—");
     return `
       <div class="detail-event-row">
-        <span class="de-time">${formatTime(l.timestamp)}</span>
+        <span class="de-time">${formatTime(l.timestamp)} <span class="ts-dots" data-full="${formatTimeFull(l.timestamp)}">...</span><span class="ts-full" style="display:none;"></span></span>
         <span class="de-site">${l.site || "—"}</span>
         <span><span class="action-pill">${l.action || "—"}</span></span>
         <span><span class="risk-pill risk-${l.risk}">${l.risk}</span></span>
@@ -230,11 +236,17 @@ document.getElementById("sort").addEventListener("change", e => {
   renderUsers();
 });
 
-document.getElementById("back-btn").addEventListener("click", () => {
-  window.location.href = "dashboard.html";
-});
-
 document.getElementById("user-list").addEventListener("click", e => {
+  const dots = e.target.closest(".ts-dots");
+  if (dots) {
+    e.stopPropagation();
+    const full = dots.nextElementSibling;
+    const isOpen = full.style.display !== "none";
+    full.textContent = dots.dataset.full;
+    full.style.display = isOpen ? "none" : "inline";
+    dots.style.display = isOpen ? "inline" : "none";
+    return;
+  }
   if (e.target.closest(".restrict-cell")) return;
   const row = e.target.closest(".user-row");
   if (!row) return;
@@ -254,6 +266,10 @@ document.getElementById("user-list").addEventListener("change", e => {
     blockedUsers = updated;
     chrome.storage.local.set({ blockedUsers: updated });
   });
+});
+
+document.querySelectorAll("[data-nav]").forEach(el => {
+  el.addEventListener("click", () => { location.href = el.dataset.nav; });
 });
 
 load();

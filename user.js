@@ -9,6 +9,11 @@ function getEmail(raw) { return (raw || "").split("|")[0].trim(); }
 
 function formatTime(ts) {
   const d = new Date(ts);
+  return d.toLocaleDateString("en-US", { month: "long" });
+}
+
+function formatTimeFull(ts) {
+  const d = new Date(ts);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " +
     d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
@@ -125,17 +130,30 @@ function renderEvents() {
   }
 
   list.innerHTML = filtered.map(log => `
-    <div class="event-row">
-      <span class="cell ts">${formatTime(log.timestamp)}</span>
+    <div class="event-row" data-ts="${log.timestamp}">
+      <span class="cell ts">${formatTime(log.timestamp)} <span class="ts-dots" data-full="${formatTimeFull(log.timestamp)}">...</span><span class="ts-full" style="display:none;"></span></span>
       <span class="cell site">${log.site || "—"}</span>
       <span class="cell"><span class="action-pill">${log.action || "—"}</span></span>
       <span class="cell"><span class="risk-pill risk-${log.risk}">${log.risk}</span></span>
       <span class="cell detail">
         ${log.blocked ? '<span class="blocked-badge">BLOCKED</span>' : ""}
         ${log.category ? `<span style="color:var(--amber);font-family:var(--mono);font-size:10px;margin-right:6px;">[${log.category}]</span>` : ""}
+        ${log.intent && log.intent !== "other" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;color:#0071e3;background:rgba(0,113,227,0.1);border:1px solid rgba(0,113,227,0.2);font-family:var(--mono);margin-right:6px;">${log.intent}</span>` : ""}
+        ${log.output_risk === "HIGH" ? `<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;color:#ff3b30;background:rgba(255,59,48,0.1);border:1px solid rgba(255,59,48,0.2);font-family:var(--mono);margin-right:6px;">out:HIGH</span>` : ""}
         ${getDetails(log)}
       </span>
     </div>`).join("");
+
+  list.querySelectorAll(".ts-dots").forEach(dots => {
+    dots.addEventListener("click", e => {
+      e.stopPropagation();
+      const full = dots.nextElementSibling;
+      const isOpen = full.style.display !== "none";
+      full.textContent = dots.dataset.full;
+      full.style.display = isOpen ? "none" : "inline";
+      dots.style.display = isOpen ? "inline" : "none";
+    });
+  });
 }
 
 function load() {
@@ -148,6 +166,10 @@ function load() {
     renderAll();
   });
 }
+
+document.querySelectorAll("[data-nav]").forEach(el => {
+  el.addEventListener("click", () => { location.href = el.dataset.nav; });
+});
 
 renderHeader();
 
